@@ -93,15 +93,6 @@ class FileStreamSource(
   /** Maximum number of new bytes to be considered in each batch */
   private val maxBytesPerBatch = sourceOptions.maxBytesPerTrigger
 
-  private val fileSortOrder = if (sourceOptions.latestFirst) {
-      logWarning(
-        """'latestFirst' is true. New files will be processed first, which may affect the watermark
-          |value. In addition, 'maxFileAge' will be ignored.""".stripMargin)
-      implicitly[Ordering[Long]].reverse
-    } else {
-      implicitly[Ordering[Long]]
-    }
-
   private val maxFileAgeMs: Long = if (sourceOptions.latestFirst &&
       (maxFilesPerBatch.isDefined || maxBytesPerBatch.isDefined)) {
     Long.MaxValue
@@ -388,9 +379,12 @@ class FileStreamSource(
       case Some(false) => allFiles = allFilesUsingInMemoryFileIndex()
     }
 
-    val files = allFiles.sortBy(_.getModificationTime)(fileSortOrder).map { status =>
+    val fileSorter = FileSorter.loadImpl(sourceOptions.orderingMethod)
+
+    val files = fileSorter.sortFiles(allFiles, sourceOptions.latestFirst).map { status =>
       NewFileEntry(SparkPath.fromFileStatus(status), status.getLen, status.getModificationTime)
     }
+
     val endTime = System.nanoTime
     val listingTimeMs = NANOSECONDS.toMillis(endTime - startTime)
     if (listingTimeMs > 2000) {

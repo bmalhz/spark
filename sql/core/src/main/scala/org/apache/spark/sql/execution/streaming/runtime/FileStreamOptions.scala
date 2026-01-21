@@ -89,6 +89,35 @@ class FileStreamOptions(parameters: CaseInsensitiveMap[String]) extends Logging 
    */
   val latestFirst: Boolean = withBooleanParameter("latestFirst", false)
 
+/**
+ * Fully qualified object name of the implementation used to order files.
+ *
+ * The value must be the fully qualified object name of an object that extends
+ * {@code org.apache.spark.sql.execution.streaming.runtime.FileSorter}.
+ * The implementation is used to determine the ordering of files discovered by the streaming source.
+ *
+ * **Default:** {@code org.apache.spark.sql.execution.streaming.runtime.ModificationTimeFileSorter}
+ * (orders files by modification timestamp).
+ *
+ * **Alternative:** {@code org.apache.spark.sql.execution.streaming.runtime.FilenameFileSorter}
+ * (orders files by filename).
+ *
+ * **Configuration key:** {@code orderingMethod}
+ *
+ * **Notes:**
+ * - The object is loaded reflectively; ensure it is available on the classpath.
+ * - Ordering must be deterministic to avoid non-deterministic processing.
+ *
+ * @see org.apache.spark.sql.execution.streaming.runtime.FileSorter
+ * @see org.apache.spark.sql.execution.streaming.runtime.ModificationTimeFileSorter
+ * @see org.apache.spark.sql.execution.streaming.runtime.FilenameFileSorter
+ */
+val orderingMethod: String = parameters.getOrElse(
+  "orderingMethod",
+  "org.apache.spark.sql.execution.streaming.runtime.ModificationTimeFileSorter"
+)
+
+
   /**
    * Whether to check new files based on only the filename instead of on the full path.
    *
